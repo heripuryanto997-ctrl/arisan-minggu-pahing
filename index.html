@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arisan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--p:#6c5ce7;--p2:#a29bfe;--bg:#f4f3ff;--c:#fff;--t:#2d2a4a;--m:#7a7799;--ok:#00b894;--no:#e17055}
+@media(prefers-color-scheme:dark){:root{--bg:#15142a;--c:#211f3d;--t:#ecebff;--m:#a3a0c8}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t)}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.up{animation:up .5s both}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6c5ce7,#fd79a8,#00cec9);background-size:300% 300%;animation:g 8s infinite alternate}
+@keyframes g{to{background-position:100% 100%}}
+.box{background:var(--c);padding:32px;border-radius:20px;width:min(360px,90vw);animation:pop .5s;box-shadow:0 20px 50px #0003}
+.box .ic{font-size:52px;text-align:center;animation:fl 3s infinite}
+input,select,button{font:inherit;width:100%;padding:11px 13px;border-radius:10px;border:1px solid #8884;background:var(--bg);color:var(--t);margin:5px 0}
+button{background:var(--p);color:#fff;border:0;cursor:pointer;transition:.2s;font-weight:600}
+button:hover{transform:translateY(-2px);box-shadow:0 6px 16px #6c5ce766}button.s{width:auto;padding:6px 12px;margin:2px}button.d{background:var(--no)}button.g{background:var(--m)}
+#app{display:none}aside{position:fixed;inset:0 auto 0 0;width:230px;background:var(--c);padding:18px;transition:.3s;z-index:5;box-shadow:2px 0 20px #0001}
+aside h2{margin:0 0 16px;color:var(--p)}aside a{display:block;padding:12px;border-radius:10px;margin:4px 0;cursor:pointer;color:var(--t);transition:.2s}
+aside a:hover,aside a.on{background:var(--p);color:#fff;transform:translateX(6px)}
+main{margin-left:230px;padding:22px}#burger{display:none;width:auto;padding:8px 14px}
+@media(max-width:800px){aside{transform:translateX(-100%)}aside.open{transform:none}main{margin-left:0}#burger{display:block}}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.card{background:var(--c);padding:18px;border-radius:16px;margin-bottom:14px;box-shadow:0 4px 16px #0001;animation:up .5s both;transition:.2s}
+.card:hover{transform:translateY(-4px)}.num{font-size:30px;font-weight:800;color:var(--p)}.m{color:var(--m);font-size:13px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}td,th{padding:10px;text-align:left;border-bottom:1px solid #8883;white-space:nowrap}
+tr{animation:up .4s both}.tag{padding:3px 10px;border-radius:20px;font-size:12px;color:#fff}
+#modal{display:none;position:fixed;inset:0;background:#0007;z-index:9;align-items:center;justify-content:center;padding:12px}
+#modal .box{max-height:90vh;overflow:auto;width:min(520px,100%)}
+@media print{aside,#burger,.np{display:none!important}main{margin:0}}
+</style></head><body>
+<div id="login"><div class="box"><div class="ic">🎲</div><h2 style="text-align:center">Arisan</h2>
+<input id="u" placeholder="Username (anggota: No HP)"><input id="p" type="password" placeholder="Password">
+<button onclick="doLogin()">Masuk</button><div id="le" class="m" style="color:var(--no);text-align:center"></div></div></div>
+
+<div id="app"><aside id="side"><h2>🎲 Arisan</h2>
+<a data-m="dash" onclick="go('dash')">📊 Dashboard</a><a data-m="ang" onclick="go('ang')">👥 Data Anggota</a>
+<a data-m="per" onclick="go('per')">🏆 Perolehan</a><a data-m="lap" onclick="go('lap')">🖨️ Laporan</a>
+<a onclick="gp()">🔑 Ganti Password</a><a onclick="logout()">🚪 Logout</a></aside>
+<main><button id="burger" onclick="side.classList.toggle('open')">☰ Menu</button><div id="v"></div></main></div>
+<div id="modal"><div class="box" id="mb"></div></div>
+
+<script>
+// Kosongkan jika dipakai di Apps Script. Isi URL /exec jika di-host di Vercel.
+const API_URL = "";
+const $ = id => document.getElementById(id), rp = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+let T = localStorage.getItem('t') || '', ME = JSON.parse(localStorage.getItem('me') || 'null'), CH = [], D = null, CUR = 'dash';
+const inGAS = typeof google !== 'undefined' && google.script;
+
+function api(fn, args) {
+  return new Promise((ok, no) => {
+    if (inGAS) google.script.run.withSuccessHandler(ok).withFailureHandler(e => no(e.message)).rpc(fn, T, args || {});
+    else fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ fn, token: T, args: args || {} }) })
+      .then(r => r.json()).then(ok).catch(e => no(e.message));
+  }).then(r => { if (r && r.expired) logout(true); return r; });
+}
+async function doLogin() {
+  $('le').textContent = 'Memproses...';
+  let r; try { r = await api('login', { u: $('u').value, p: $('p').value }); } catch (e) { return $('le').textContent = 'Gagal: ' + e; }
+  if (!r || r.err) return $('le').textContent = r ? r.err : 'Tidak ada respon dari server';
+  T = r.token; ME = r.me; localStorage.setItem('t', T); localStorage.setItem('me', JSON.stringify(ME)); start();
+}
+['u', 'p'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }));
+function logout(quiet) {   // tanpa reload: langsung kembali ke halaman login
+  if (!quiet && T) api('logout').catch(() => 0);
+  localStorage.clear(); T = ''; ME = null; D = null; CH.forEach(c => c.destroy()); CH = [];
+  closeM(); side.classList.remove('open'); $('app').style.display = 'none'; $('v').innerHTML = '';
+  $('login').style.display = 'flex'; $('u').value = ''; $('p').value = ''; $('le').textContent = '';
+}
+function start() {
+  $('login').style.display = 'none'; $('app').style.display = 'block';
+  document.querySelectorAll('aside a').forEach(a => { if (a.dataset.m === 'ang') a.style.display = ME.role === 'admin' ? '' : 'none'; });
+  document.querySelectorAll('aside a[data-m="lap"]').forEach(a => a.style.display = ME.role === 'admin' ? '' : 'none');
+  go('dash');
+}
+// Data dimuat sekali (init). Pindah menu = tampil langsung dari cache, lalu disegarkan di latar belakang.
+async function load() {
+  const r = await api('init');
+  if (!r || r.err) return false;
+  const s = JSON.stringify(r); if (D && D._s === s) return false;
+  D = { ...r, _s: s }; return true;
+}
+const busy = () => $('modal').style.display === 'flex';
+async function go(m) {
+  if (ME.role !== 'admin' && (m === 'ang' || m === 'lap')) m = 'dash';   // anggota: hanya dashboard & perolehan
+  CUR = m; side.classList.remove('open');
+  document.querySelectorAll('aside a').forEach(a => a.classList.toggle('on', a.dataset.m === m));
+  if (D) { R[m](); load().then(ch => { if (ch && CUR === m && !busy() && T) R[m](); }); }
+  else { $('v').innerHTML = '<p class="m">Memuat data...</p>'; await load(); if (CUR === m && T) R[m](); }
+}
+async function refresh() { await load(); R[CUR](); }
+
+function dash() {
+  const d = D.dashboard; CH.forEach(c => c.destroy()); CH = [];
+  $('v').innerHTML = `<h2 class="up">Dashboard</h2><div class="grid">
+  <div class="card"><div class="m">Jumlah Anggota</div><div class="num" data-n="${d.total}">0</div></div>
+  <div class="card"><div class="m">Sudah Keluar Lot</div><div class="num" data-n="${d.sudah}" style="color:var(--ok)">0</div></div>
+  <div class="card"><div class="m">Belum Keluar Lot</div><div class="num" data-n="${d.belum}" style="color:var(--no)">0</div></div>
+  <div class="card"><div class="m">Jumlah Perolehan</div><div class="num" data-n="${d.jumlah}" data-r="1">0</div></div></div>
+  ${ME.role === 'admin' ? '' : `<div class="card"><div class="m">Status Lot Anda</div><div class="num" style="font-size:22px">${D.perolehan.length ? '🎉 Sudah keluar — Lot ke-' + D.perolehan.map(p => p.lot).join(', ') : '⏳ Belum keluar lot'}</div>
+  <div class="m">Perolehan Anda: <b>${rp(D.perolehan.reduce((s, p) => s + p.jumlah, 0))}</b></div></div>`}
+  <div class="grid"><div class="card"><canvas id="c1"></canvas></div><div class="card"><canvas id="c2"></canvas></div></div>`;
+  document.querySelectorAll('[data-n]').forEach(e => { const to = +e.dataset.n; let i = 0;
+    const iv = setInterval(() => { i = Math.min(to, i + Math.ceil(to / 25)); e.textContent = e.dataset.r ? rp(i) : i; if (i >= to) clearInterval(iv); }, 20); });
+  CH.push(new Chart($('c1'), { type: 'doughnut', data: { labels: ['Sudah Lot', 'Belum Lot'], datasets: [{ data: [d.sudah, d.belum], backgroundColor: ['#00b894', '#e17055'] }] },
+    options: { animation: { duration: 1000 }, plugins: { title: { display: true, text: 'Status Lot Anggota' } } } }));
+  CH.push(new Chart($('c2'), { type: 'bar', data: { labels: d.perLot.map(x => 'Lot ' + x.lot), datasets: [{ label: 'Perolehan', data: d.perLot.map(x => x.jumlah), backgroundColor: '#6c5ce7', borderRadius: 8 }] },
+    options: { animation: { duration: 1000 }, plugins: { title: { display: true, text: 'Perolehan per Lot' } } } }));
+}
+function ang() {
+  const AG = D.anggota, adm = ME.role === 'admin';
+  $('v').innerHTML = `<h2 class="up">Data Anggota</h2><div class="card"><button class="s np" onclick="fa()" ${adm ? '' : 'style="display:none"'}>➕ Tambah Anggota</button>
+  <div class="tw"><table><tr><th>#</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Username</th>${adm ? '<th class="np">Password</th><th class="np">Aksi</th>' : ''}</tr>
+  ${AG.map((a, i) => `<tr style="animation-delay:${i * 30}ms"><td>${i + 1}</td><td>${a.nama}</td><td>${a.alamat}</td><td>${a.hp}</td><td>${a.username}</td>
+  ${adm ? `<td class="np">${a.password}</td><td class="np"><button class="s" onclick="fa('${a.id}')">✏️</button><button class="s d" onclick="da('${a.id}')">🗑️</button></td>` : ''}</tr>`).join('')}</table></div></div>`;
+}
+function modal(h) { $('mb').innerHTML = h; $('modal').style.display = 'flex'; }
+const closeM = () => $('modal').style.display = 'none';
+function gp() {
+  modal(`<h3>Ganti Password</h3><input id="g1" type="password" placeholder="Password lama"><input id="g2" type="password" placeholder="Password baru">
+  <button onclick="sg()">💾 Simpan</button><button class="g" onclick="closeM()">Batal</button>`);
+}
+async function sg() { const r = await api('saveAkun', { lama: $('g1').value, baru: $('g2').value }); if (r.err) return alert(r.err); closeM(); alert('Password diganti'); }
+function fa(id) {
+  const a = D.anggota.find(x => x.id == id) || {};
+  modal(`<h3>${a.id ? 'Edit' : 'Tambah'} Anggota</h3><input id="fn" placeholder="Nama" value="${a.nama || ''}">
+  <input id="fd" placeholder="Alamat" value="${a.alamat || ''}"><input id="fh" placeholder="No HP" value="${a.hp || ''}">
+  <input id="fu" placeholder="Username login (kosong = No HP)" value="${a.username || ''}"><input id="fw" placeholder="Password login (kosong = No HP)" value="${a.password || ''}">
+  <button onclick="sa('${a.id || ''}')">💾 Simpan</button><button class="g" onclick="closeM()">Batal</button>`);
+}
+async function sa(id) {
+  if (!$('fn').value || !$('fh').value) return alert('Nama dan No HP wajib diisi');
+  const r = await api('saveAnggota', { id, nama: $('fn').value, alamat: $('fd').value, hp: $('fh').value, username: $('fu').value, password: $('fw').value });
+  if (r.err) return alert(r.err); closeM(); refresh();
+}
+async function da(id) { if (confirm('Hapus anggota ini?')) { await api('delAnggota', { id }); refresh(); } }
+
+// Daftar semua anggota + nominal bayar (0 = belum bayar) untuk satu lot
+function detail(p) {
+  const base = D.semua;
+  return base.map(a => ({ nama: a.nama, nominal: (p.bayar.find(b => b.anggotaId == a.id) || {}).nominal || 0 }));
+}
+const stat = n => n > 0 ? '<span class="tag" style="background:var(--ok)">Sudah bayar</span>' : '<span class="tag" style="background:var(--no)">Belum bayar</span>';
+function per() {
+  const PR = D.perolehan, adm = ME.role === 'admin';
+  $('v').innerHTML = `<h2 class="up">${adm ? 'Perolehan Arisan' : 'Perolehan Saya'}</h2><div class="card">${adm ? '<button class="s np" onclick="fp()">➕ Input Perolehan</button>' : ''}
+  ${PR.length ? '' : '<p class="m">Belum ada perolehan atas nama Anda.</p>'}
+  <div class="tw"><table><tr><th>Lot</th><th>Penerima</th><th>Tanggal</th><th>Pembayaran</th><th>Jumlah Diterima</th>${adm ? '<th>Aksi</th>' : ''}</tr>
+  ${PR.map((p, i) => `<tr style="animation-delay:${i * 30}ms"><td><span class="tag" style="background:var(--p)">Lot ke-${p.lot}</span></td><td>${p.nama}</td><td>${p.tanggal}</td>
+  <td><button class="s" onclick="dt('${p.id}')">👁️ Detail (${p.bayar.length}/${D.semua.length})</button></td><td><b>${rp(p.jumlah)}</b></td>
+  ${adm ? `<td><button class="s" onclick="fp('${p.id}')">✏️</button><button class="s d" onclick="dp('${p.id}')">🗑️</button></td>` : ''}</tr>`).join('')}</table></div></div>`;
+}
+function dt(id) {
+  const p = D.perolehan.find(x => x.id == id), d = detail(p), lunas = d.filter(x => x.nominal > 0).length;
+  modal(`<h3>Detail Pembayaran — Lot ke-${p.lot}</h3><p class="m">Penerima: <b>${p.nama}</b> · ${p.tanggal}</p>
+  <div class="tw"><table><tr><th>#</th><th>Anggota</th><th>Nominal</th><th>Status</th></tr>
+  ${d.map((x, i) => `<tr><td>${i + 1}</td><td>${x.nama}</td><td>${x.nominal ? rp(x.nominal) : '-'}</td><td>${stat(x.nominal)}</td></tr>`).join('')}
+  <tr><th colspan="2">Total diterima</th><th colspan="2">${rp(p.jumlah)}</th></tr></table></div>
+  <p class="m">${lunas} dari ${d.length} anggota sudah membayar</p><button class="g" onclick="closeM()">Tutup</button>`);
+}
+function fp(id) {
+  const AG = D.semua, p = D.perolehan.find(x => x.id == id) || { bayar: [] };
+  modal(`<h3>${id ? 'Edit' : 'Input'} Perolehan</h3>
+  <select id="pl">${Array.from({ length: Math.max(AG.length, 1) }, (_, i) => `<option value="${i + 1}" ${p.lot == i + 1 ? 'selected' : ''}>Lot ke-${i + 1}</option>`).join('')}</select>
+  <select id="pa"><option value="">-- Pilih Penerima --</option>${AG.map(a => `<option value="${a.id}" ${p.anggotaId == a.id ? 'selected' : ''}>${a.nama}</option>`).join('')}</select>
+  <input id="pt" type="date" value="${p.tanggal || new Date().toISOString().slice(0, 10)}">
+  <p class="m">Nominal pembayaran tiap anggota (boleh berbeda, kosongkan jika belum bayar):</p>
+  ${AG.map(a => `<div style="display:flex;gap:8px;align-items:center"><span style="flex:1">${a.nama}</span>
+  <input class="pn" data-id="${a.id}" type="number" min="0" style="width:140px" oninput="tot()" value="${(p.bayar.find(b => b.anggotaId == a.id) || {}).nominal || ''}"></div>`).join('')}
+  <h3>Jumlah diterima: <span id="tt">Rp 0</span></h3><button onclick="sp('${id || ''}')">💾 Simpan</button><button class="g" onclick="closeM()">Batal</button>`); tot();
+}
+function tot() { $('tt').textContent = rp([...document.querySelectorAll('.pn')].reduce((s, e) => s + +e.value, 0)); }
+async function sp(id) {
+  if (!$('pa').value) return alert('Pilih penerima');
+  const r = await api('savePerolehan', { id, lot: +$('pl').value, anggotaId: $('pa').value, tanggal: $('pt').value,
+    payments: [...document.querySelectorAll('.pn')].map(e => ({ anggotaId: e.dataset.id, nominal: +e.value })) });
+  if (r.err) return alert(r.err); closeM(); refresh();
+}
+async function dp(id) { if (confirm('Hapus perolehan ini?')) { await api('delPerolehan', { id }); refresh(); } }
+
+function lap() {
+  const d = D.perolehan, all = d.reduce((s, p) => s + p.jumlah, 0);
+  $('v').innerHTML = `<h2 class="up">Laporan Arisan</h2><button class="s np" onclick="print()">🖨️ Cetak</button>
+  ${d.map((p, i) => `<div class="card" style="animation-delay:${i * 50}ms"><b>Lot ke-${p.lot} — ${p.nama}</b> <span class="m">(${p.tanggal})</span>
+  <div class="tw"><table><tr><th>Anggota</th><th>Nominal</th><th>Status</th></tr>${detail(p).map(x => `<tr><td>${x.nama}</td><td>${x.nominal ? rp(x.nominal) : '-'}</td><td>${stat(x.nominal)}</td></tr>`).join('')}
+  <tr><th>Jumlah Diterima</th><th colspan="2">${rp(p.jumlah)}</th></tr></table></div></div>`).join('')}
+  <div class="card"><b>Total Perolehan: ${rp(all)}</b></div>`;
+}
+const R = { dash, ang, per, lap };
+if (T && ME) start();
+</script></body></html>
