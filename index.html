@@ -30,13 +30,18 @@ main{margin-left:230px;padding:22px}#burger{display:none;width:auto;padding:8px 
 tr{animation:up .4s both}.tag{padding:3px 10px;border-radius:20px;font-size:12px;color:#fff}
 #modal{display:none;position:fixed;inset:0;background:#0007;z-index:9;align-items:center;justify-content:center;padding:12px}
 #modal .box{max-height:90vh;overflow:auto;width:min(520px,100%)}
+@keyframes sh{to{background-position:200% 0}}
+.hero{display:flex;align-items:center;gap:16px;padding:20px;border-radius:20px;color:#fff;margin-bottom:16px;background:linear-gradient(120deg,#6c5ce7,#a29bfe,#fd79a8,#6c5ce7);background-size:300% 100%;animation:pop .5s both,sh 10s linear infinite;box-shadow:0 10px 30px #6c5ce755}
+.av{width:56px;height:56px;border-radius:50%;background:#fff3;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex:none;animation:fl 3s infinite}
+.hero h2{margin:0 0 4px;font-size:clamp(18px,4vw,24px)}.hero .r{display:inline-block;background:#fff3;padding:2px 12px;border-radius:20px;font-size:12px;margin-right:6px}
+.who{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--bg);margin-bottom:14px;font-size:13px}.who .av{width:36px;height:36px;font-size:16px;background:var(--p);color:#fff;animation:none}
 @media print{aside,#burger,.np{display:none!important}main{margin:0}}
 </style></head><body>
 <div id="login"><div class="box"><div class="ic">🎲</div><h2 style="text-align:center">Arisan Minggu Pahing</h2>
 <input id="u" placeholder="Username"><input id="p" type="password" placeholder="Password">
 <button onclick="doLogin()">Masuk</button><div id="le" class="m" style="color:var(--no);text-align:center"></div></div></div>
 
-<div id="app"><aside id="side"><h2>🎲 Arisan Minggu Pahing</h2>
+<div id="app"><aside id="side"><h2>🎲 Arisan Minggu Pahing</h2><div id="who" class="who"></div>
 <a data-m="dash" onclick="go('dash')">📊 Dashboard</a><a data-m="ang" onclick="go('ang')">👥 Data Anggota</a>
 <a data-m="per" onclick="go('per')">🏆 Perolehan</a><a data-m="lap" onclick="go('lap')">🖨️ Laporan</a>
 <a onclick="gp()">🔑 Ganti Password</a><a onclick="logout()">🚪 Logout</a></aside>
@@ -76,12 +81,22 @@ function start() {
   document.querySelectorAll('aside a[data-m="lap"]').forEach(a => a.style.display = ME.role === 'admin' ? '' : 'none');
   go('dash');
 }
+function setWho() {
+  const s = D.saya, ini = (s.nama || '?').trim().charAt(0).toUpperCase();
+  $('who').innerHTML = `<div class="av">${ini}</div><div><b>${s.nama}</b><br><span class="m">${s.role === 'admin' ? 'Admin' : 'Anggota'}</span></div>`;
+}
+function hero() {
+  const s = D.saya, hr = new Date().getHours(), sp = hr < 11 ? 'Selamat pagi' : hr < 15 ? 'Selamat siang' : hr < 18 ? 'Selamat sore' : 'Selamat malam';
+  const tgl = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return `<div class="hero"><div class="av">${(s.nama || '?').trim().charAt(0).toUpperCase()}</div><div><h2>${sp}, ${s.nama} 👋</h2>
+  <span class="r">${s.role === 'admin' ? '🛡️ Admin' : '👤 Anggota'}</span><span class="r">@${s.user}</span><span class="r">📅 ${tgl}</span></div></div>`;
+}
 // Data dimuat sekali (init). Pindah menu = tampil langsung dari cache, lalu disegarkan di latar belakang.
 async function load() {
   const r = await api('init');
   if (!r || r.err) return false;
   const s = JSON.stringify(r); if (D && D._s === s) return false;
-  D = { ...r, _s: s }; return true;
+  D = { ...r, _s: s }; setWho(); return true;
 }
 const busy = () => $('modal').style.display === 'flex';
 async function go(m) {
@@ -95,7 +110,7 @@ async function refresh() { await load(); R[CUR](); }
 
 function dash() {
   const d = D.dashboard; CH.forEach(c => c.destroy()); CH = [];
-  $('v').innerHTML = `<h2 class="up">Dashboard</h2><div class="grid">
+  $('v').innerHTML = `${hero()}<div class="grid">
   <div class="card"><div class="m">Jumlah Anggota</div><div class="num" data-n="${d.total}">0</div></div>
   <div class="card"><div class="m">Sudah Keluar Lot</div><div class="num" data-n="${d.sudah}" style="color:var(--ok)">0</div></div>
   <div class="card"><div class="m">Belum Keluar Lot</div><div class="num" data-n="${d.belum}" style="color:var(--no)">0</div></div>
