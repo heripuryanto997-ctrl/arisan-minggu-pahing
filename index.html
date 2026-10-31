@@ -32,11 +32,11 @@ tr{animation:up .4s both}.tag{padding:3px 10px;border-radius:20px;font-size:12px
 #modal .box{max-height:90vh;overflow:auto;width:min(520px,100%)}
 @media print{aside,#burger,.np{display:none!important}main{margin:0}}
 </style></head><body>
-<div id="login"><div class="box"><div class="ic">🎲</div><h2 style="text-align:center">Arisan</h2>
-<input id="u" placeholder="Username (anggota: No HP)"><input id="p" type="password" placeholder="Password">
+<div id="login"><div class="box"><div class="ic">🎲</div><h2 style="text-align:center">Arisan Minggu Pahing</h2>
+<input id="u" placeholder="Username"><input id="p" type="password" placeholder="Password">
 <button onclick="doLogin()">Masuk</button><div id="le" class="m" style="color:var(--no);text-align:center"></div></div></div>
 
-<div id="app"><aside id="side"><h2>🎲 Arisan</h2>
+<div id="app"><aside id="side"><h2>🎲 Arisan Minggu Pahing</h2>
 <a data-m="dash" onclick="go('dash')">📊 Dashboard</a><a data-m="ang" onclick="go('ang')">👥 Data Anggota</a>
 <a data-m="per" onclick="go('per')">🏆 Perolehan</a><a data-m="lap" onclick="go('lap')">🖨️ Laporan</a>
 <a onclick="gp()">🔑 Ganti Password</a><a onclick="logout()">🚪 Logout</a></aside>
@@ -45,7 +45,7 @@ tr{animation:up .4s both}.tag{padding:3px 10px;border-radius:20px;font-size:12px
 
 <script>
 // Kosongkan jika dipakai di Apps Script. Isi URL /exec jika di-host di Vercel.
-const API_URL = "";
+const API_URL = "https://script.google.com/macros/s/AKfycbzLbLZ8KITH79q2_3Wa2UoNacsOBP4nXkezJ9EtkvMHfCbCgoS-3srHahHoElRSIEub7g/exec";
 const $ = id => document.getElementById(id), rp = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 let T = localStorage.getItem('t') || '', ME = JSON.parse(localStorage.getItem('me') || 'null'), CH = [], D = null, CUR = 'dash';
 const inGAS = typeof google !== 'undefined' && google.script;
